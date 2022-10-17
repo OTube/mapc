@@ -1,0 +1,733 @@
+#include "main.h"
+
+vec2 mat_Mult_Vec(mat2 mt, vec2 rhs){
+    return VEC2(mt.m00 * rhs.x + mt.m01 * rhs.y, mt.m10 * rhs.x + mt.m11 * rhs.y);
+}
+
+void mat2_Set(mat2 *obj, float radians){
+    float c = cos(radians);
+    float s = sin(radians);
+
+    obj->m00 = c; obj->m01 = -s;
+    obj->m10 = s; obj->m11 =  c;
+}
+vec2 vec2_Plus(vec2 v1, vec2 v2){
+    return VEC2(v1.x + v2.x, v1.y + v2.y);
+}
+vec2 vec2_Minus(vec2 v1, vec2 v2){
+    return VEC2(v1.x - v2.x, v1.y - v2.y);
+}
+float vec2_Len(vec2 obj){
+    return sqrt(obj.x * obj.x + obj.y * obj.y);
+}
+void vec2_Normalize(vec2 *obj){
+    float len = vec2_Len(*obj);
+    if(len > 0.001f){
+        float invLen = 1.0f / len;
+        obj->x *= invLen;
+        obj->y *= invLen;
+    }
+}
+vec2 vec2_Multi_F(vec2 v1, float mf){
+    return (vec2){v1.x*mf,v1.y*mf};
+}
+
+unsigned int aabb_in_cam(float aminx, float aminy, float scx, float scy){
+    if(aminx + scx < 0.0f || aminx > 2.0f) return 0;
+    if(aminy + scy < 0.0f || aminy > 1.0f) return 0;
+    return 1;
+}
+
+unsigned int aabb_in_aabb(float *a, float *b){
+    if(a[4] < b[0] || a[0] > b[4]) return 0;
+    if(a[5] < b[1] || a[1] > b[5]) return 0;
+    return 1;
+}
+
+void redraw(void){
+  glClear(GL_COLOR_BUFFER_BIT);
+  glBindTexture(GL_TEXTURE_2D, user_texture);
+
+  for(int f = 0; f < 10; ++f){
+    layer *lay = selected_room->ierarchy + f;
+      for(int e = 0; e < lay->lenght; ++e){
+        object *o_ptr = lay->objects + e;
+        //float px = o_ptr->pos.x - cam_pos.x;
+        //float py = o_ptr->pos.y - cam_pos.y;
+        //if(aabb_in_cam(px, py, o_ptr->scale.x, o_ptr->scale.y) && !o_ptr->isNull){
+            SETRECT(markdown,o_ptr->mc);
+            mat2 rotm;
+            mat2_Set(&rotm, RAD(o_ptr->rotation));
+            vec2 verts[4]={
+                VEC2(-o_ptr->scale.x/2.0f, -o_ptr->scale.y/2.0f),
+                VEC2(o_ptr->scale.x/2.0f, -o_ptr->scale.y/2.0f),
+                VEC2(o_ptr->scale.x/2.0f, o_ptr->scale.y/2.0f),
+                VEC2(-o_ptr->scale.x/2.0f, o_ptr->scale.y/2.0f),
+            };
+            for(int h = 0; h < 4; ++h){
+                vec2 v = vec2_Plus(vec2_Minus(o_ptr->pos, cam_pos), mat_Mult_Vec(rotm, verts[h]));
+                rectCoord[h*2] = v.x*g_scale;
+                rectCoord[h*2+1] = v.y*g_scale;
+            }
+            glDrawArrays(GL_QUADS, 0, 4);
+        //}
+   }
+    //GLROTATE(-o_ptr->rotation);
+  }
+  for(int e = 0; e < markdown_len; ++e){
+    SETRECT(markdown, e*8);
+    SETCOORD(1.8f, 0.95f-e/20.0f, 0.2f, 0.05f);
+    glDrawArrays(GL_QUADS, 0, 4);
+  }
+  glBindTexture(GL_TEXTURE_2D, texture);
+    SETRECT(plod_markdown,PLOD_BUTTON);
+    float scalee = selected_room->coords.y - selected_room->coords.x;
+    //SETCOORD(0, 0, 1.0f, scalee);
+    //glDrawArrays(GL_QUADS, 0, 4);
+    if(selected.obj > -1){
+        object *obj_p = selected_room->selected_layer->selected_object;
+        vec2 r_bias = obj_p->pos; //ierarchy[selected_ierarchy].pos;
+        r_bias.x -= cam_pos.x;
+        r_bias.y -= cam_pos.y;
+        SETRECT(plod_markdown,PLOD_RAMKA);
+        SETCOORD(r_bias.x-obj_p->scale.x/2.0f, r_bias.y-obj_p->scale.y/2.0f, obj_p->scale.x, obj_p->scale.y);
+        for(int h= 0; h < 8; ++h){
+            rectCoord[h] *= g_scale;
+        }
+        glDrawArrays(GL_QUADS, 0, 4);
+        if(selected_room->pos_move){
+            SETRECT(plod_markdown,PLOD_POS_EDIT);
+            SETCOORD(r_bias.x-0.05f, r_bias.y-0.05f, 0.1f, 0.1f);
+            for(int h = 0; h < 8; ++h)
+                rectCoord[h] *= g_scale;
+            glDrawArrays(GL_QUADS, 0, 4);
+        }
+        if(obj_p->is_animated){
+            SETCOORD(r_bias.x-0.05f, r_bias.y-0.05f, 0.1f, 0.1f);
+            for(int h = 0; h < 8; ++h) rectCoord[h] *= g_scale;
+            if(obj_p->animation.dt_rot){
+                SETRECT(plod_markdown,PLOD_ANIM_ROT);
+            }else{
+                SETRECT(plod_markdown,PLOD_ANIM_POS);
+            }
+            glDrawArrays(GL_QUADS, 0, 4);
+            if(obj_p->animation.pos.x || obj_p->animation.pos.y){
+                r_bias = vec2_Plus(r_bias, obj_p->animation.pos);
+                SETCOORD(r_bias.x-0.05f, r_bias.y-0.05f, 0.1f, 0.1f);
+                for(int h = 0; h < 8; ++h) rectCoord[h] *= g_scale;
+                SETRECT(plod_markdown,PLOD_ANIM_POS);
+                glDrawArrays(GL_QUADS, 0, 4);
+            }
+        }
+    }
+    for(int k = selected_room->selected_layer->objects_pos; k < selected_room->selected_layer->lenght; ++k){
+        if(!selected_room->selected_layer->objects[k].isNull){
+            if(selected.obj == k){
+                SETRECT(plod_markdown,PLOD_BUTTON);
+            }else{
+                SETRECT(plod_markdown,PLOD_BUTTONP);
+            }
+            SETCOORD(0.0f, 0.9f-(k-selected_room->selected_layer->objects_pos)/10.0f, 0.2f, 0.1f);
+            glDrawArrays(GL_QUADS, 0, 4);
+        }
+    }
+    for(int u = 0; u < 10; ++u){
+        if(selected.layer == u){
+            SETRECT(plod_markdown,PLOD_BUTTON);
+        }else{
+            SETRECT(plod_markdown,PLOD_BUTTONP);
+        }
+        SETCOORD(0.2f+u/10.0f, 0.9f, BSIZEX, BSIZEY);
+        glDrawArrays(GL_QUADS, 0, 4);
+    }
+    for(int g = 0; g < rooms_len; ++g){
+        if(selected.room == g){
+            SETRECT(plod_markdown,PLOD_BUTTON);
+        }else{
+            SETRECT(plod_markdown,PLOD_BUTTONP);
+        }
+        SETCOORD(0.2f+g/10.0f, 0.0f, BSIZEX, BSIZEY);
+        glDrawArrays(GL_QUADS, 0, 4);
+    }
+    /*if(toast){
+        puts("toast");
+        toast = 0;
+        char nchar;
+        unsigned int m = 0;
+        while((nchar = out[m]) != '\0'){
+            SETCOORD(m/10.0f, 0.0f, BSIZEX, BSIZEY);
+            if(nchar == ' '){
+                //SETRECT(NUMSCALEX*6,DRL(NUMSCALEY*4), NUMSCALEX*7,DRL(NUMSCALEY*4), NUMSCALEX*7,DRL(NUMSCALEY*3), NUMSCALEX*6,DRL(NUMSCALEY*3));
+            }else if(nchar > '`'){
+                float bx = (nchar - 'a') % 10 * NUMSCALEX, by = (nchar - 'a') / 10 * NUMSCALEY;
+                //SETRECT(bx,DRL(NUMSCALEY+NUMSCALEY+by), NUMSCALEX+bx,DRL(NUMSCALEY+NUMSCALEY+by), NUMSCALEX+bx,DRL(NUMSCALEY+by), bx,DRL(NUMSCALEY+by));
+            }else{
+                float bx = (nchar - '0') % 10 * NUMSCALEX;
+                //SETRECT(bx,DRL(NUMSCALEY), NUMSCALEX+bx,DRL(NUMSCALEY), NUMSCALEX+bx,DRL(0), bx,DRL(0));
+            }
+            glDrawArrays(GL_QUADS, 0, 4);
+            ++m;
+        }
+    }*/
+  glXSwapBuffers(dpy, win);
+}
+
+int main(int argc, char **argv){
+    XVisualInfo         *vi;
+    Colormap             cmap;
+    XSetWindowAttributes swa;
+    GLXContext           cx;
+    XEvent               event;
+    GLboolean            needRedraw = GL_FALSE;
+    int                  dummy;
+
+    dpy = XOpenDisplay(NULL);
+    if (dpy == NULL) return 1;
+
+    if(!glXQueryExtension(dpy, &dummy, &dummy)) return 1;
+
+    vi = glXChooseVisual(dpy, DefaultScreen(dpy), dblBuf);
+    if (vi == NULL) return 1;
+    if(vi->class != TrueColor) return 1;
+
+    cx = glXCreateContext(dpy, vi, None, GL_TRUE);
+    if (cx == NULL) return 1;
+
+    cmap = XCreateColormap(dpy, RootWindow(dpy, vi->screen), vi->visual, AllocNone);
+    swa.colormap = cmap;
+    swa.border_pixel = 0;
+    swa.event_mask = KeyPressMask    | ExposureMask
+                 | ButtonPressMask | StructureNotifyMask;
+    win = XCreateWindow(dpy, RootWindow(dpy, vi->screen), 0, 0,
+                      1280, 640, 0, vi->depth, InputOutput, vi->visual,
+                      CWBorderPixel | CWColormap | CWEventMask, &swa);
+    XSetStandardProperties(dpy, win, "main", "main", None,
+                         argv, argc, NULL);
+
+    glXMakeCurrent(dpy, win, cx);
+
+    XMapWindow(dpy, win);
+
+    glClearColor(0.0, 0.0, 0.5, 0.0);
+
+    unsigned char *data;
+    FILE *fl = fopen("/home/oleg/Desktop/plodtex.utx", "rb");
+    if(fl == NULL) return 1;
+    data = (unsigned char*)malloc(128 * 128 * 4 * sizeof(unsigned char));
+    fread(data, 128 * 128 * 4, 1, fl);
+    fclose(fl);
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glVertexPointer(2, GL_FLOAT, 0, rectCoord);
+    glTexCoordPointer(2, GL_FLOAT, 0, rectTex);
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 128, 128, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    free(data);
+    unsigned char *userdata = decode("/home/oleg/Desktop/tex.ugg", 2048, 847070); //(unsigned char*)malloc(USER_IMAGE_SIZE_INT * USER_IMAGE_SIZE_INT * 4 * sizeof(unsigned char));
+    if(userdata == NULL) return 1;
+    //fl = fopen("/home/oleg/Desktop/gametex.utx", "rb");
+    //if(fl == NULL) return 1;
+    //fread(userdata, USER_IMAGE_SIZE_INT * USER_IMAGE_SIZE_INT * 4, 1, fl);
+    //fclose(fl);
+    glGenTextures(1, &user_texture);
+    glBindTexture(GL_TEXTURE_2D, user_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, USER_IMAGE_SIZE_INT, USER_IMAGE_SIZE_INT, 0, GL_RGBA, GL_UNSIGNED_BYTE, userdata);
+    free(userdata);
+    cam_pos = VEC2(-1.0f, -0.5f);
+    selected_room = rooms + selected.room;
+    selected_room->selected_layer = selected_room->ierarchy;
+    //selected_room->selected_layer->selected_object = selected_room->selected_layer->objects + selected.obj;
+    for(int f = 0; f < 10; ++f){
+        selected_room->ierarchy[f].objects = (object*)malloc(sizeof(object) * 20);
+        selected_room->ierarchy[f].lenght = 0;
+        selected_room->ierarchy[f].ram_size = 20;
+    }
+    while (1){
+    do{
+      XNextEvent(dpy, &event);
+      switch (event.type){
+        case KeyPress:{
+            switch(event.xkey.keycode){
+                case 65:{
+                    float pxc = (event.xbutton.x - biasx) / sS;
+                    float pyc = 1.0f - (event.xbutton.y - biasy) / sS;
+                    pxc /= g_scale;
+                    pyc /= g_scale;
+                    if(!selected_room->selected_layer->has_empty){
+                        if(selected_room->selected_layer->lenght + 1 > selected_room->ierarchy[selected.layer].ram_size){
+                            selected_room->selected_layer->ram_size += 20;
+                            selected_room->selected_layer->objects = (object*)realloc(selected_room->selected_layer->objects,
+                                sizeof(object) * selected_room->selected_layer->ram_size);
+                        }
+                        object *obj_p = selected_room->selected_layer->objects + selected_room->selected_layer->lenght;
+                        obj_p->rotation = 0;
+                        float i_coo = (float)(markdown[selected_markdown+2] - markdown[selected_markdown])/(float)(markdown[selected_markdown+1] - markdown[selected_markdown+7]);
+                        //obj_p->scale = VEC2((float)(markdown[selected_markdown+2] - markdown[selected_markdown]) / USER_IMAGE_SIZE * 2.0f, (float)(markdown[selected_markdown+1] - markdown[selected_markdown+7]) / USER_IMAGE_SIZE * 2.0f);
+                        if(i_coo > 1) obj_p->scale = VEC2(0.8f, 0.4f);
+                        else if(i_coo < 1) obj_p->scale = VEC2(0.4f, 0.8f);
+                        else obj_p->scale = VEC2(0.8f, 0.8f);
+                        //obj_p->pos = VEC2(cam_pos.x + pxc, cam_pos.y + pyc);
+                        obj_p->pos = VEC2(pxc + cam_pos.x, pyc + cam_pos.y);
+                        obj_p->mc = selected_markdown;
+                        obj_p->isNull = 0;
+                        obj_p->is_animated = 0;
+                        selected_room->selected_layer->selected_object = obj_p;
+                        selected.obj = selected_room->selected_layer->lenght++;
+                    }else{
+                        unsigned int i;
+                        while(!selected_room->selected_layer->objects[i].isNull){
+                            ++i;
+                        }
+                        selected_room->selected_layer->objects[i].isNull = 0;
+                        selected_room->selected_layer->objects[i].pos = VEC2(cam_pos.x + pxc, cam_pos.y + pyc);
+                        selected_room->selected_layer->objects[i].scale = VEC2(0.3f, 0.3f);
+                        selected_room->selected_layer->objects[i].mc = selected_markdown;
+                        selected_room->selected_layer->objects[i].is_animated = 0;
+                        --selected_room->selected_layer->has_empty;
+                    }
+                    needRedraw = GL_TRUE;
+                    break;
+                }
+                case 52:{
+                    if(selected.obj > -1){
+                        selected_room->pos_move = !selected_room->pos_move;
+                        selected_room->inactt_obj = selected.obj;
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 25:{
+                    cam_pos.y += 0.1f/g_scale;
+                    needRedraw = GL_TRUE;
+                    break;
+                }
+                case 38:{
+                    cam_pos.x -= 0.1f/g_scale;
+                    needRedraw = GL_TRUE;
+                    break;
+                }
+                case 39:{
+                    cam_pos.y -= 0.1f/g_scale;
+                    needRedraw = GL_TRUE;
+                    break;
+                }
+                case 40:{
+                    cam_pos.x += 0.1f/g_scale;
+                    needRedraw = GL_TRUE;
+                    break;
+                }
+                case 27:{
+                    glColor3f(0,0,0);
+                    glClearColor(0.97,0.32,0,0);
+                    needRedraw = GL_TRUE;
+                    break;
+                }
+                case 30:{
+                    g_scale *= 0.9f;
+                    needRedraw = GL_TRUE;
+                    break;
+                }
+                case 31:{
+                    g_scale *= 1.1f;
+                    needRedraw = GL_TRUE;
+                    break;
+                }
+                case 34:{
+                    if(selected_room->selected_layer->objects_pos>0){
+                        --selected_room->selected_layer->objects_pos;
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 35:{
+                    if(selected_room->selected_layer->objects_pos<selected_room->selected_layer->lenght)
+                        ++selected_room->selected_layer->objects_pos;
+                        needRedraw = GL_TRUE;
+                    break;
+                }
+                case 57:{
+                    if(selected.obj > -1 && selected_room->selected_layer->selected_object->is_animated)
+                        selected_room->selected_layer->selected_object->animation.time -= 10;
+                    break;
+                }
+                case 58:{
+                    if(selected.obj > -1 && selected_room->selected_layer->selected_object->is_animated)
+                        selected_room->selected_layer->selected_object->animation.time += 10;
+                    break;
+                }
+                case 20:{
+                    int to = selected.layer - 1;
+                    if(selected.obj > -1 && to > -1){
+                        ++selected_room->selected_layer->has_empty;
+                        if(selected_room->ierarchy[to].lenght + 1 > selected_room->ierarchy[to].ram_size){
+                            selected_room->ierarchy[to].ram_size += 20;
+                            selected_room->ierarchy[to].objects = (object*)realloc(selected_room->selected_layer->objects, sizeof(object) * selected_room->ierarchy[to].ram_size);
+                        }
+                        selected_room->ierarchy[to].objects[selected_room->ierarchy[to].lenght] = *selected_room->selected_layer->selected_object;
+                        selected_room->selected_layer->selected_object->isNull = 1;
+                        selected.obj = selected_room->ierarchy[to].lenght++;
+                        --selected.layer;
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 21:{
+                    int to = selected.layer + 1;
+                    if(selected.obj >-1 && to < 10){
+                        ++selected_room->ierarchy[selected.layer].has_empty;
+                        if(selected_room->ierarchy[to].lenght + 1 > selected_room->ierarchy[to].ram_size){
+                            selected_room->ierarchy[to].ram_size += 20;
+                            selected_room->ierarchy[to].objects = (object*)realloc(selected_room->selected_layer->objects, sizeof(object) * selected_room->ierarchy[to].ram_size);
+                        }
+                        selected_room->ierarchy[to].objects[selected_room->ierarchy[to].lenght] = *selected_room->selected_layer->selected_object;
+                        selected_room->selected_layer->selected_object->isNull = 1;
+                        selected.obj = selected_room->ierarchy[to].lenght++;
+                        ++selected.layer;
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 41:{
+                    selected_room = rooms + rooms_len;
+                    //*selected_room = *rooms;
+                    selected_room->selected_layer = selected_room->ierarchy;
+                    selected.room = rooms_len;
+                    selected.obj = -1;
+                    selected.layer = 0;
+                    ++rooms_len;
+                    for(int f = 0; f < 10; ++f){
+                        selected_room->ierarchy[f].objects = (object*)malloc(sizeof(object) * 20);
+                        selected_room->ierarchy[f].lenght = 0;
+                        selected_room->ierarchy[f].ram_size = 20;
+                    }
+                    selected_room->coords = VEC2(-10, 10);
+                    needRedraw = GL_TRUE;
+                    break;
+                }
+                case 42:{
+                    if(selected.obj > -1){
+                        selected_room->selected_layer->selected_object->is_animated = !selected_room->selected_layer->selected_object->is_animated;
+                        selected_room->selected_layer->selected_object->animation = (anim){.time=30};
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 59:{
+                    if(selected.obj > -1 && selected_room->selected_layer->selected_object->is_animated){
+                        selected_room->selected_layer->selected_object->animation.dt_rot += 0.05f;
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 60:{
+                    if(selected.obj > -1 && selected_room->selected_layer->selected_object->is_animated){
+                        selected_room->selected_layer->selected_object->animation.dt_rot -= 0.05f;
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 48:{
+                    if(selected.obj > -1 && selected_room->selected_layer->selected_object->is_animated){
+                        glBindTexture(GL_TEXTURE_2D, user_texture);
+                        object *o_ptr = selected_room->selected_layer->selected_object;
+                        float save = o_ptr->rotation;
+                        vec2 savep = o_ptr->pos;
+                        unsigned int timerem = 0;
+                        unsigned int mu_tex = 0;
+                        vec2 pos_dt;
+                        for(unsigned int d = 0; d < 120; ++d){
+                            if(!timerem){
+                                //pos_dt = (mu_tex = !mu_tex)?o_ptr->animation.pos:pos2;
+                                pos_dt = vec2_Multi_F(o_ptr->animation.pos, ((mu_tex = !mu_tex)?1.0f:-1.0f)/o_ptr->animation.time);
+                                timerem = o_ptr->animation.time;
+                            }
+                            o_ptr->pos = vec2_Plus(o_ptr->pos, pos_dt);
+                            o_ptr->rotation += o_ptr->animation.dt_rot;
+                            glClear(GL_COLOR_BUFFER_BIT);
+                            SETRECT(markdown,o_ptr->mc);
+                            mat2 rotm;
+                            mat2_Set(&rotm, RAD(o_ptr->rotation));
+                            vec2 verts[4]={
+                                VEC2(-o_ptr->scale.x/2.0f, -o_ptr->scale.y/2.0f),
+                                VEC2(o_ptr->scale.x/2.0f, -o_ptr->scale.y/2.0f),
+                                VEC2(o_ptr->scale.x/2.0f, o_ptr->scale.y/2.0f),
+                                VEC2(-o_ptr->scale.x/2.0f, o_ptr->scale.y/2.0f),
+                            };
+                            for(int h = 0; h < 4; ++h){
+                                vec2 v = vec2_Plus(vec2_Minus(o_ptr->pos, cam_pos), mat_Mult_Vec(rotm, verts[h]));
+                                rectCoord[h*2] = v.x*g_scale;
+                                rectCoord[h*2+1] = v.y*g_scale;
+                            }
+                            glDrawArrays(GL_QUADS, 0, 4);
+                            --timerem;
+                            glXSwapBuffers(dpy, win);
+                        }
+                        o_ptr->rotation = save;
+                        o_ptr->pos = savep;
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 61:{
+                    if(selected_room->selected_layer->selected_object->is_animated){
+                        float pxc = (event.xbutton.x - biasx) / sS;
+                        float pyc = 1.0f - (event.xbutton.y - biasy) / sS;
+                        //vec2 rel = vec2_Plus(VEC2(pxc, pyc), cam_pos);
+                        pxc /= g_scale;
+                        pyc /= g_scale;
+                        vec2 rel = VEC2(pxc+cam_pos.x, pyc+cam_pos.y);
+                        selected_room->selected_layer->selected_object->animation.pos = vec2_Minus(rel, selected_room->selected_layer->selected_object->pos);
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 113:{
+                    if(selected.obj > -1){
+                        selected_room->selected_layer->selected_object->rotation += 10.0f;
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 114:{
+                    if(selected.obj > -1){
+                        selected_room->selected_layer->selected_object->rotation -= 10.0f;
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 111:{
+                    if(selected.obj > -1){
+                        float coo = selected_room->selected_layer->selected_object->scale.x / selected_room->selected_layer->selected_object->scale.y;
+                        selected_room->selected_layer->selected_object->scale.x -= 0.02f * coo;
+                        selected_room->selected_layer->selected_object->scale.y -= 0.02f;
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 116:{
+                    if(selected.obj > -1){
+                        float coo = selected_room->selected_layer->selected_object->scale.x / selected_room->selected_layer->selected_object->scale.y;
+                        selected_room->selected_layer->selected_object->scale.x += 0.02f * coo;
+                        selected_room->selected_layer->selected_object->scale.y += 0.02f;
+                        needRedraw = GL_TRUE;
+                    }
+                    break;
+                }
+                case 119:{
+                    ++selected_room->selected_layer->has_empty;
+                    selected_room->selected_layer->selected_object->isNull = 1;
+                    selected.obj = -1;
+                    needRedraw = GL_TRUE;
+                    break;
+                }
+                case 33:{
+                    FILE *saved_scene = fopen("/home/oleg/Main/cbps/CardCreator/scene.scn", "wb");
+                    unsigned char len_char = (unsigned char)rooms_len;
+                    fwrite(&len_char, 1, 1, saved_scene);
+                    for(unsigned int r = 0; r < rooms_len; ++r){
+                        selected_room = rooms + r;
+                        unsigned char fore_lenght = 0, back_lenght = 0;
+                        vec2 start = {9999, 9999};
+                        vec2 finish ={-9999, -9999};
+                        for(int g = 0; g < 10; ++g){
+                            unsigned int is_fore = g > 4;
+                            for(int f = 0; f < selected_room->ierarchy[g].lenght; ++f){
+                                object *obj = selected_room->ierarchy[g].objects + f;
+                                float coo = obj->scale.x / obj->scale.y;
+                                if(is_fore){
+                                    float x = obj->pos.x - obj->scale.x/2.0f;
+                                    if(x < start.x)
+                                        start = VEC2(x, obj->pos.y+obj->scale.y/2.0f);
+                                    x += obj->scale.x;
+                                    if(x > finish.x)
+                                        finish = VEC2(x, obj->pos.y+obj->scale.y/2.0f);
+                                    anim a = obj->is_animated?obj->animation:(anim){};
+                                    a.active = obj->is_animated == 1;
+                                    selected_room->mainscene.foreground[fore_lenght] = (platform){
+                                        obj->pos,
+                                        obj->rotation,
+                                        obj->scale,
+                                        obj->mc,
+                                        g > 7,
+                                        a
+                                    };
+                                    ++fore_lenght;
+                                }else{
+                                    float px = obj->pos.x - cam_pos.x;
+                                    float py = obj->pos.y - cam_pos.y;
+                                    SETCOORD(px, py, obj->scale.x, obj->scale.y);
+                                    mat2 rotm;
+                                    mat2_Set(&rotm, RAD(obj->rotation));
+                                    vec2 verts[4]={
+                                        VEC2(-obj->scale.x/2.0f, -obj->scale.y/2.0f),
+                                        VEC2(obj->scale.x/2.0f, -obj->scale.y/2.0f),
+                                        VEC2(obj->scale.x/2.0f, obj->scale.y/2.0f),
+                                        VEC2(-obj->scale.x/2.0f, obj->scale.y/2.0f),
+                                    };
+                                    for(int h = 0; h < 4; ++h){
+                                        vec2 v;
+                                        v = vec2_Plus(obj->pos, mat_Mult_Vec(rotm, verts[h]));
+                                        rectCoord[h*2] = v.x;
+                                        rectCoord[h*2+1] = v.y;
+                                    }
+                                    selected_room->mainscene.background[back_lenght] = (back_obj){
+                                        .img_code = obj->mc,
+                                        .parralax_level = g / 1.0f
+                                    };
+                                    for(int d = 0; d < 8; ++d)
+                                        selected_room->mainscene.background[back_lenght].verts[d] = rectCoord[d];
+                                    ++back_lenght;
+                                }
+                            }
+                        }
+                        unsigned char conf[2] = {back_lenght, fore_lenght};
+                        fwrite(conf, sizeof(unsigned char) * 2, 1, saved_scene);
+                        vec2 poses[2] = {start, finish};
+                        fwrite(poses, sizeof(vec2) * 2, 1, saved_scene);
+                        if(back_lenght) fwrite(selected_room->mainscene.background, sizeof(back_obj) * back_lenght, 1, saved_scene);
+                        if(fore_lenght) fwrite(selected_room->mainscene.foreground, sizeof(platform) * fore_lenght, 1, saved_scene);
+                    }
+                    fclose(saved_scene);
+                    break;
+                }
+                case 9:{
+                    glBindTexture(GL_TEXTURE_2D, 0);
+                    glDeleteTextures(1, &texture);
+                    glDisableClientState(GL_VERTEX_ARRAY);
+                    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+                    glDisable(GL_BLEND);
+                    glDisable(GL_TEXTURE_2D);
+                    for(int h = 0; h < 4; ++h)
+                        for(int f = 0; f < 10; ++f)
+                            free((rooms + h)->ierarchy[f].objects);
+                    return 0;
+                }
+            }
+          break;
+        }
+        case ButtonPress:{
+            float pxc = (event.xbutton.x - biasx) / sS;
+            float pyc = 1.0f - (event.xbutton.y - biasy) / sS;
+            if(pxc > -1 && pxc < 2 && pyc > -1 && pyc < 1){
+                if(selected_room->pos_move){
+                    pxc /= g_scale;
+                    pyc /= g_scale;
+                    object *objP = selected_room->selected_layer->objects + selected_room->inactt_obj;
+                    objP->pos = VEC2(pxc + cam_pos.x, pyc + cam_pos.y);
+                    selected_room->pos_move = 0;
+                    needRedraw = GL_TRUE;
+                }else if(pxc < 0.2f){
+                    unsigned int ind = 19 - (unsigned int)((pyc + 1.0f) / 0.1f) + selected_room->selected_layer->objects_pos;
+                    if(ind < selected_room->selected_layer->lenght){
+                        selected.obj = selected.obj != ind ? ind : -1;
+                        selected_room->selected_layer->selected_object = selected_room->selected_layer->objects + selected.obj;
+                        needRedraw = GL_TRUE;
+                    }
+                }else if(pxc > 1.8f){
+                    int ind = 19 - ((int)(pyc * 20));
+                    if(ind > -1 && ind < markdown_len){
+                        selected_markdown = ind * 8;
+                        //needRedraw = GL_TRUE;
+                    }
+                }else if(pyc > 0.9f && pxc < 1.2f){
+                    int ind = (int)(pxc*10)-2;
+                    if(ind < 10){
+                        selected_room->selected_layer->sel_obj = selected.obj;
+                        //selected_room->selected_lay_code = selected.layer;
+                        selected_room->selected_layer->selected_object = selected_room->selected_layer->objects + selected.obj;
+                        selected.layer = ind;
+                        selected.obj = selected_room->ierarchy[ind].lenght - selected_room->ierarchy[ind].has_empty > 0 ? selected_room->ierarchy[ind].sel_obj : -1;
+                        selected_room->selected_layer = selected_room->ierarchy + ind;
+                        selected_room->selected_layer->sel_obj = selected.obj;
+                        selected_room->selected_layer->selected_object = selected_room->selected_layer->objects + selected.obj;
+                        needRedraw = GL_TRUE;
+                    }
+                }else if(pyc < 0.1f && pxc < 1.2f){
+                    int ind = (int)(pxc*10)-2;
+                    if(ind < rooms_len){
+                        selected.room = ind;
+                        selected_room = rooms + ind;
+                        //selected.obj = selected_room->selected_layer->sel_obj;
+                        selected.obj = 0;
+                        selected_room->selected_layer = selected_room->ierarchy;
+                        selected_room->selected_layer->selected_object = selected_room->selected_layer->objects;
+                        needRedraw = GL_TRUE;
+                    }
+                }else{
+                    pxc += cam_pos.x*g_scale;
+                    pyc += cam_pos.y*g_scale;
+                    //pxc *= g_scale;
+                    //pyc *= g_scale;
+                    for(int f = 0; f < 10; ++f){
+                        for(int u = selected_room->ierarchy[f].lenght; u > -1; --u){
+                            object *ine = selected_room->ierarchy[f].objects + u;
+                            if(ine->isNull) continue;
+                            float pc0 = ine->pos.x*g_scale;
+                            float pc1 = ine->pos.y*g_scale;
+                            float s_v0 = ine->scale.x/2.0f*g_scale;
+                            float s_v1 = ine->scale.y/2.0f*g_scale;
+                            if((pxc >= pc0 - s_v0) && (pyc >= pc1 - s_v1) && (pxc <= pc0 + s_v0) &&
+                                (pyc <= pc1 + s_v1)){
+                                //toast = 1;
+                                //snprintf(out, 16, "cmemoifwmo");
+                                selected.obj = u;
+                                selected.layer = f;
+                                selected_room->selected_layer = selected_room->ierarchy + f;
+                                selected_room->selected_layer->selected_object = selected_room->selected_layer->objects + u;
+                                selected_room->is_layer_move = 0;
+                                selected_room->pos_move = 0;
+                                needRedraw = GL_TRUE;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        }
+        case ConfigureNotify:{
+            glLoadIdentity();
+            int wr = event.xconfigure.width;
+            int hr = event.xconfigure.height;
+            float coo = (float)wr / (float)hr;
+            if(coo > 2){
+                biasx = (wr - hr*2.0f) / 2.0f;
+                glViewport((wr - (wr / coo * 2)) / 2, 0, wr / coo * 2, hr);
+                glOrtho(0, wr / coo * 2 / hr, 0, 1, 0, 1);
+                sS = (float)hr;
+                biasy = 0;
+            }else if(coo < 2){
+                biasy = (hr - wr/2.0f) / 2.0f;
+                glViewport(0, (hr - (hr / (2 / coo))) / 2, wr, hr / (2 / coo));
+                glOrtho(0, 1, 0, hr / (2 / coo) / wr, 0, 1);
+                sS = (float)wr/2;
+                biasx = 0;
+            }else{
+                glViewport(0, 0, wr, hr);
+                glOrtho(0.0f, 2.0f, 0.0f, 1.0f, 0.0f, 1.0f);
+                sS = (float)hr;
+                biasx = 0;
+                biasy = 0;
+            }
+        }
+        case Expose:
+          needRedraw = GL_TRUE;
+          break;
+      }
+    } while(XPending(dpy));
+    if(needRedraw){
+        redraw();
+        needRedraw = GL_FALSE;
+    }
+    }
+
+  return 0;
+}
