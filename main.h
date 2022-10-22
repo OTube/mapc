@@ -13,7 +13,6 @@
 #define BSIZEY 0.1f
 #define NUMSCALEX 0.046875f
 #define NUMSCALEY 0.0625f
-#define DRL(x) x + 0.375f
 #define USER_IMAGE_SIZE 2048.0f
 #define USER_IMAGE_SIZE_INT 2048
 #define PLOD_RAMKA 0
@@ -33,9 +32,17 @@
 #define GLTRANSLATE(dx, dy) glTranslatef(-dx, -dy, 0.0f)
 #define IMG_PART(startx, starty, scalex, scaley) startx, starty+scaley, startx+scalex, starty+scaley, startx+scalex, starty, startx, starty
 #define RAD(deg) deg * (3.141593f / 180.0f)
-#define ASSERT(expr) if((expr) == NULL) puts("null")
 #define PRINT(x) printf("%p\n", x)
 #define PRINT_SELECTION() printf("layer: %d object: %d\n", selected.layer, selected.obj)
+
+#define TAG_HERO 1
+#define TAG_ENEMY 2
+#define TAG_GROUND 3
+#define TAG_WOOD 4
+#define TAG_IRON 5
+#define TAG_ELECTRON 6
+#define TAG_START 7
+#define TAG_FINISH 8
 
 typedef struct{
     float x, y;
@@ -61,6 +68,7 @@ typedef struct{
     unsigned int isNull;
     anim animation;
     unsigned int is_animated;
+    uint tag;
 } object;
 
 typedef struct{
@@ -89,8 +97,9 @@ typedef struct{
     vec2 pos;
     float rot;
     vec2 scale;
-    unsigned int img_code;
-    unsigned int is_static;
+    uint tag;
+    uint img_code;
+    uint is_static;
     anim a;
 }platform;
 
@@ -107,7 +116,7 @@ Display   *dpy;
 Window     win;
 
 unsigned int toast;
-//char out[8];
+char out[8];
 float rectCoord[8];
 float rectTex[8];
 float sS;
