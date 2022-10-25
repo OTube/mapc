@@ -40,9 +40,10 @@
 #define TAG_GROUND 3
 #define TAG_WOOD 4
 #define TAG_IRON 5
-#define TAG_ELECTRON 6
-#define TAG_START 7
-#define TAG_FINISH 8
+#define TAG_WATER 6
+#define TAG_ELECTRON 7
+#define TAG_START 8
+#define TAG_FINISH 9
 
 typedef struct{
     float x, y;
@@ -56,7 +57,7 @@ typedef struct{
 typedef struct{
     unsigned char active;
     float dt_rot;
-    unsigned int time;
+    unsigned short time;
     vec2 pos;
 }anim;
 
@@ -65,10 +66,10 @@ typedef struct{
     float rotation;
     vec2 pos;
     vec2 scale;
-    unsigned int isNull;
     anim animation;
     unsigned int is_animated;
     uint tag;
+    uint rigid;
 } object;
 
 typedef struct{
@@ -76,7 +77,6 @@ typedef struct{
     object *selected_object;
     int sel_obj;
     unsigned int lenght;
-    unsigned int has_empty;
     unsigned int ram_size;
     unsigned int objects_pos;
 }layer;
@@ -97,9 +97,10 @@ typedef struct{
     vec2 pos;
     float rot;
     vec2 scale;
-    uint tag;
-    uint img_code;
-    uint is_static;
+    unsigned char rigid;
+    unsigned char tag;
+    unsigned char img_code;
+    unsigned char is_static;
     anim a;
 }platform;
 
@@ -115,8 +116,9 @@ GLuint texture, user_texture;
 Display   *dpy;
 Window     win;
 
-unsigned int toast;
-char out[8];
+float spawned_scale = 0.4f;
+float spawned_rot = 0.0f;
+anim  am;
 float rectCoord[8];
 float rectTex[8];
 float sS;

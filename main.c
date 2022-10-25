@@ -52,41 +52,36 @@ void redraw(void){
     layer *lay = selected_room->ierarchy + f;
       for(int e = 0; e < lay->lenght; ++e){
         object *o_ptr = lay->objects + e;
-        //float px = o_ptr->pos.x - cam_pos.x;
-        //float py = o_ptr->pos.y - cam_pos.y;
-        //if(aabb_in_cam(px, py, o_ptr->scale.x, o_ptr->scale.y) && !o_ptr->isNull){
-            SETRECT(markdown,o_ptr->mc);
-            mat2 rotm;
-            mat2_Set(&rotm, RAD(o_ptr->rotation));
-            vec2 verts[4]={
-                VEC2(-o_ptr->scale.x/2.0f, -o_ptr->scale.y/2.0f),
-                VEC2(o_ptr->scale.x/2.0f, -o_ptr->scale.y/2.0f),
-                VEC2(o_ptr->scale.x/2.0f, o_ptr->scale.y/2.0f),
-                VEC2(-o_ptr->scale.x/2.0f, o_ptr->scale.y/2.0f),
-            };
-            for(int h = 0; h < 4; ++h){
-                vec2 v = vec2_Plus(vec2_Minus(o_ptr->pos, cam_pos), mat_Mult_Vec(rotm, verts[h]));
-                rectCoord[h*2] = v.x*g_scale;
-                rectCoord[h*2+1] = v.y*g_scale;
-            }
-            glDrawArrays(GL_QUADS, 0, 4);
-        //}
+        SETRECT(markdown,o_ptr->mc);
+        mat2 rotm;
+        mat2_Set(&rotm, RAD(o_ptr->rotation));
+        vec2 verts[4]={
+            VEC2(-o_ptr->scale.x/2.0f, -o_ptr->scale.y/2.0f),
+            VEC2(o_ptr->scale.x/2.0f, -o_ptr->scale.y/2.0f),
+            VEC2(o_ptr->scale.x/2.0f, o_ptr->scale.y/2.0f),
+            VEC2(-o_ptr->scale.x/2.0f, o_ptr->scale.y/2.0f),
+        };
+        for(int h = 0; h < 4; ++h){
+            vec2 v = vec2_Plus(vec2_Minus(o_ptr->pos, cam_pos), mat_Mult_Vec(rotm, verts[h]));
+            rectCoord[h*2] = v.x*g_scale;
+            rectCoord[h*2+1] = v.y*g_scale;
+        }
+        glDrawArrays(GL_QUADS, 0, 4);
    }
-    //GLROTATE(-o_ptr->rotation);
   }
-  for(int e = 0; e < markdown_len; ++e){
-    SETRECT(markdown, e*8);
-    SETCOORD(1.8f, 0.95f-e/20.0f, 0.2f, 0.05f);
-    glDrawArrays(GL_QUADS, 0, 4);
+  if(selected.obj < 0){
+      for(int e = 0; e < markdown_len; ++e){
+        SETRECT(markdown, e*8);
+        SETCOORD(1.9f, 0.95f-e/20.0f, 0.1f, 0.05f);
+        glDrawArrays(GL_QUADS, 0, 4);
+      }
   }
   glBindTexture(GL_TEXTURE_2D, texture);
     SETRECT(plod_markdown,PLOD_BUTTON);
     float scalee = selected_room->coords.y - selected_room->coords.x;
-    //SETCOORD(0, 0, 1.0f, scalee);
-    //glDrawArrays(GL_QUADS, 0, 4);
     if(selected.obj > -1){
         object *obj_p = selected_room->selected_layer->selected_object;
-        vec2 r_bias = obj_p->pos; //ierarchy[selected_ierarchy].pos;
+        vec2 r_bias = obj_p->pos;
         r_bias.x -= cam_pos.x;
         r_bias.y -= cam_pos.y;
         SETRECT(plod_markdown,PLOD_RAMKA);
@@ -121,15 +116,13 @@ void redraw(void){
         }
     }
     for(int k = selected_room->selected_layer->objects_pos; k < selected_room->selected_layer->lenght; ++k){
-        if(!selected_room->selected_layer->objects[k].isNull){
-            if(selected.obj == k){
-                SETRECT(plod_markdown,PLOD_BUTTON);
-            }else{
-                SETRECT(plod_markdown,PLOD_BUTTONP);
-            }
-            SETCOORD(0.0f, 0.9f-(k-selected_room->selected_layer->objects_pos)/10.0f, 0.2f, 0.1f);
-            glDrawArrays(GL_QUADS, 0, 4);
+        if(selected.obj == k){
+            SETRECT(plod_markdown,PLOD_BUTTON);
+        }else{
+            SETRECT(plod_markdown,PLOD_BUTTONP);
         }
+        SETCOORD(0.0f, 0.9f-(k-selected_room->selected_layer->objects_pos)/10.0f, 0.2f, 0.1f);
+        glDrawArrays(GL_QUADS, 0, 4);
     }
     for(int u = 0; u < 10; ++u){
         if(selected.layer == u){
@@ -148,6 +141,17 @@ void redraw(void){
         }
         SETCOORD(0.2f+g/10.0f, 0.0f, BSIZEX, BSIZEY);
         glDrawArrays(GL_QUADS, 0, 4);
+    }
+    if(selected.obj > -1){
+        for(int g = 0; g < TAG_FINISH; ++g){
+            if(selected_room->selected_layer->selected_object->tag-1 == g){
+                SETRECT(plod_markdown,PLOD_BUTTON);
+            }else{
+                SETRECT(plod_markdown,PLOD_BUTTONP);
+            }
+            SETCOORD(1.9f, 0.9f-g/10.0f, BSIZEX, BSIZEY);
+            glDrawArrays(GL_QUADS, 0, 4);
+        }
     }
   glXSwapBuffers(dpy, win);
 }
@@ -229,7 +233,9 @@ int main(int argc, char **argv){
         selected_room->ierarchy[f].objects = (object*)malloc(sizeof(object) * 20);
         selected_room->ierarchy[f].lenght = 0;
         selected_room->ierarchy[f].ram_size = 20;
+        selected_room->ierarchy[f].sel_obj = -1;
     }
+    am.active = 0;
     while (1){
     do{
       XNextEvent(dpy, &event);
@@ -241,38 +247,26 @@ int main(int argc, char **argv){
                     float pyc = 1.0f - (event.xbutton.y - biasy) / sS;
                     pxc /= g_scale;
                     pyc /= g_scale;
-                    if(!selected_room->selected_layer->has_empty){
-                        if(selected_room->selected_layer->lenght + 1 > selected_room->ierarchy[selected.layer].ram_size){
-                            selected_room->selected_layer->ram_size += 20;
-                            selected_room->selected_layer->objects = (object*)realloc(selected_room->selected_layer->objects,
-                                sizeof(object) * selected_room->selected_layer->ram_size);
-                        }
-                        object *obj_p = selected_room->selected_layer->objects + selected_room->selected_layer->lenght;
-                        obj_p->rotation = 0;
-                        float i_coo = (float)(markdown[selected_markdown+2] - markdown[selected_markdown])/(float)(markdown[selected_markdown+1] - markdown[selected_markdown+7]);
-                        //obj_p->scale = VEC2((float)(markdown[selected_markdown+2] - markdown[selected_markdown]) / USER_IMAGE_SIZE * 2.0f, (float)(markdown[selected_markdown+1] - markdown[selected_markdown+7]) / USER_IMAGE_SIZE * 2.0f);
-                        if(i_coo > 1) obj_p->scale = VEC2(0.8f, 0.4f);
-                        else if(i_coo < 1) obj_p->scale = VEC2(0.4f, 0.8f);
-                        else obj_p->scale = VEC2(0.8f, 0.8f);
-                        //obj_p->pos = VEC2(cam_pos.x + pxc, cam_pos.y + pyc);
-                        obj_p->pos = VEC2(pxc + cam_pos.x, pyc + cam_pos.y);
-                        obj_p->mc = selected_markdown;
-                        obj_p->isNull = 0;
-                        obj_p->is_animated = 0;
-                        selected_room->selected_layer->selected_object = obj_p;
-                        selected.obj = selected_room->selected_layer->lenght++;
-                    }else{
-                        unsigned int i;
-                        while(!selected_room->selected_layer->objects[i].isNull){
-                            ++i;
-                        }
-                        selected_room->selected_layer->objects[i].isNull = 0;
-                        selected_room->selected_layer->objects[i].pos = VEC2(cam_pos.x + pxc, cam_pos.y + pyc);
-                        selected_room->selected_layer->objects[i].scale = VEC2(0.3f, 0.3f);
-                        selected_room->selected_layer->objects[i].mc = selected_markdown;
-                        selected_room->selected_layer->objects[i].is_animated = 0;
-                        --selected_room->selected_layer->has_empty;
+                    if(selected_room->selected_layer->lenght + 1 > selected_room->ierarchy[selected.layer].ram_size){
+                        selected_room->selected_layer->ram_size += 20;
+                        selected_room->selected_layer->objects = (object*)realloc(selected_room->selected_layer->objects,
+                            sizeof(object) * selected_room->selected_layer->ram_size);
                     }
+                    object *obj_p = selected_room->selected_layer->objects + selected_room->selected_layer->lenght;
+                    obj_p->rotation = spawned_rot;
+                    float i_coo = (float)(markdown[selected_markdown+2] - markdown[selected_markdown])/(float)(markdown[selected_markdown+1] - markdown[selected_markdown+7]);
+                    //obj_p->scale = VEC2((float)(markdown[selected_markdown+2] - markdown[selected_markdown]) / USER_IMAGE_SIZE * 2.0f, (float)(markdown[selected_markdown+1] - markdown[selected_markdown+7]) / USER_IMAGE_SIZE * 2.0f);
+                    if(i_coo > 1) obj_p->scale = VEC2(spawned_scale*2, spawned_scale);
+                    else if(i_coo < 1) obj_p->scale = VEC2(spawned_scale, spawned_scale*2);
+                    else obj_p->scale = VEC2(spawned_scale, spawned_scale);
+                    //obj_p->pos = VEC2(cam_pos.x + pxc, cam_pos.y + pyc);
+                    obj_p->pos = VEC2(pxc + cam_pos.x, pyc + cam_pos.y);
+                    obj_p->mc = selected_markdown;
+                    obj_p->is_animated = am.active;
+                    if(am.active) obj_p->animation = am;
+                    obj_p->tag = TAG_GROUND;
+                    selected_room->selected_layer->selected_object = obj_p;
+                    selected.obj = selected_room->selected_layer->lenght++;
                     needRedraw = GL_TRUE;
                     printf("object created\n");
                     break;
@@ -353,40 +347,6 @@ int main(int argc, char **argv){
                     printf("anim time: %d\n", selected_room->selected_layer->selected_object->animation.time);
                     break;
                 }
-                case 20:{
-                    int to = selected.layer - 1;
-                    if(selected.obj > -1 && to > -1){
-                        ++selected_room->selected_layer->has_empty;
-                        if(selected_room->ierarchy[to].lenght + 1 > selected_room->ierarchy[to].ram_size){
-                            selected_room->ierarchy[to].ram_size += 20;
-                            selected_room->ierarchy[to].objects = (object*)realloc(selected_room->selected_layer->objects, sizeof(object) * selected_room->ierarchy[to].ram_size);
-                        }
-                        selected_room->ierarchy[to].objects[selected_room->ierarchy[to].lenght] = *selected_room->selected_layer->selected_object;
-                        selected_room->selected_layer->selected_object->isNull = 1;
-                        selected.obj = selected_room->ierarchy[to].lenght++;
-                        --selected.layer;
-                        needRedraw = GL_TRUE;
-                    }
-                    printf("object moved\n");
-                    break;
-                }
-                case 21:{
-                    int to = selected.layer + 1;
-                    if(selected.obj >-1 && to < 10){
-                        ++selected_room->ierarchy[selected.layer].has_empty;
-                        if(selected_room->ierarchy[to].lenght + 1 > selected_room->ierarchy[to].ram_size){
-                            selected_room->ierarchy[to].ram_size += 20;
-                            selected_room->ierarchy[to].objects = (object*)realloc(selected_room->selected_layer->objects, sizeof(object) * selected_room->ierarchy[to].ram_size);
-                        }
-                        selected_room->ierarchy[to].objects[selected_room->ierarchy[to].lenght] = *selected_room->selected_layer->selected_object;
-                        selected_room->selected_layer->selected_object->isNull = 1;
-                        selected.obj = selected_room->ierarchy[to].lenght++;
-                        ++selected.layer;
-                        needRedraw = GL_TRUE;
-                    }
-                    printf("object moved\n");
-                    break;
-                }
                 case 41:{
                     selected_room = rooms + rooms_len;
                     //*selected_room = *rooms;
@@ -407,8 +367,13 @@ int main(int argc, char **argv){
                 }
                 case 42:{
                     if(selected.obj > -1){
-                        selected_room->selected_layer->selected_object->is_animated = !selected_room->selected_layer->selected_object->is_animated;
-                        selected_room->selected_layer->selected_object->animation = (anim){.time=30};
+                        if(selected_room->selected_layer->selected_object->is_animated = !selected_room->selected_layer->selected_object->is_animated){
+                            selected_room->selected_layer->selected_object->animation = (anim){.time=30, .active=1};
+                            am = (anim){.time=30, .active=1};
+                        }else{
+                            selected_room->selected_layer->selected_object->animation.active = 0;
+                            am.active = 0;
+                        }
                         needRedraw = GL_TRUE;
                         printf("object animated\n");
                     }
@@ -416,7 +381,8 @@ int main(int argc, char **argv){
                 }
                 case 59:{
                     if(selected.obj > -1 && selected_room->selected_layer->selected_object->is_animated){
-                        selected_room->selected_layer->selected_object->animation.dt_rot += 0.05f;
+                        am.dt_rot = selected_room->selected_layer->selected_object->animation.dt_rot+0.05f;
+                        selected_room->selected_layer->selected_object->animation.dt_rot = am.dt_rot;
                         needRedraw = GL_TRUE;
                         printf("object animated\n");
                     }
@@ -424,7 +390,8 @@ int main(int argc, char **argv){
                 }
                 case 60:{
                     if(selected.obj > -1 && selected_room->selected_layer->selected_object->is_animated){
-                        selected_room->selected_layer->selected_object->animation.dt_rot -= 0.05f;
+                        am.dt_rot = selected_room->selected_layer->selected_object->animation.dt_rot-0.05f;
+                        selected_room->selected_layer->selected_object->animation.dt_rot = am.dt_rot;
                         needRedraw = GL_TRUE;
                         printf("anim rot: %f\n", selected_room->selected_layer->selected_object->animation.dt_rot);
                     }
@@ -441,7 +408,6 @@ int main(int argc, char **argv){
                         vec2 pos_dt;
                         for(unsigned int d = 0; d < 120; ++d){
                             if(!timerem){
-                                //pos_dt = (mu_tex = !mu_tex)?o_ptr->animation.pos:pos2;
                                 pos_dt = vec2_Multi_F(o_ptr->animation.pos, ((mu_tex = !mu_tex)?1.0f:-1.0f)/o_ptr->animation.time);
                                 timerem = o_ptr->animation.time;
                             }
@@ -481,14 +447,16 @@ int main(int argc, char **argv){
                         pxc /= g_scale;
                         pyc /= g_scale;
                         vec2 rel = VEC2(pxc+cam_pos.x, pyc+cam_pos.y);
-                        selected_room->selected_layer->selected_object->animation.pos = vec2_Minus(rel, selected_room->selected_layer->selected_object->pos);
+                        am.pos = vec2_Minus(rel, selected_room->selected_layer->selected_object->pos);
+                        selected_room->selected_layer->selected_object->animation.pos = am.pos;
                         needRedraw = GL_TRUE;
                     }
                     break;
                 }
                 case 113:{
                     if(selected.obj > -1){
-                        selected_room->selected_layer->selected_object->rotation += 10.0f;
+                        spawned_rot = selected_room->selected_layer->selected_object->rotation + 10.0f;
+                        selected_room->selected_layer->selected_object->rotation = spawned_rot;
                         needRedraw = GL_TRUE;
                         printf("object rot:%f\n", selected_room->selected_layer->selected_object->rotation);
                     }
@@ -496,7 +464,8 @@ int main(int argc, char **argv){
                 }
                 case 114:{
                     if(selected.obj > -1){
-                        selected_room->selected_layer->selected_object->rotation -= 10.0f;
+                        spawned_rot = selected_room->selected_layer->selected_object->rotation - 10.0f;
+                        selected_room->selected_layer->selected_object->rotation = spawned_rot;
                         needRedraw = GL_TRUE;
                         printf("object rot:%f\n", selected_room->selected_layer->selected_object->rotation);
                     }
@@ -505,8 +474,8 @@ int main(int argc, char **argv){
                 case 111:{
                     if(selected.obj > -1){
                         float coo = selected_room->selected_layer->selected_object->scale.x / selected_room->selected_layer->selected_object->scale.y;
-                        selected_room->selected_layer->selected_object->scale.x -= 0.02f * coo;
-                        selected_room->selected_layer->selected_object->scale.y -= 0.02f;
+                        selected_room->selected_layer->selected_object->scale = vec2_Minus(selected_room->selected_layer->selected_object->scale, VEC2(0.02f*coo, 0.02f));
+                        spawned_scale = coo > 1 ? selected_room->selected_layer->selected_object->scale.y : selected_room->selected_layer->selected_object->scale.x;
                         needRedraw = GL_TRUE;
                     }
                     break;
@@ -514,17 +483,21 @@ int main(int argc, char **argv){
                 case 116:{
                     if(selected.obj > -1){
                         float coo = selected_room->selected_layer->selected_object->scale.x / selected_room->selected_layer->selected_object->scale.y;
-                        selected_room->selected_layer->selected_object->scale.x += 0.02f * coo;
-                        selected_room->selected_layer->selected_object->scale.y += 0.02f;
+                        selected_room->selected_layer->selected_object->scale = vec2_Plus(selected_room->selected_layer->selected_object->scale, VEC2(0.02f*coo, 0.02f));
+                        spawned_scale = coo > 1 ? selected_room->selected_layer->selected_object->scale.y : selected_room->selected_layer->selected_object->scale.x;
                         needRedraw = GL_TRUE;
                     }
                     break;
                 }
                 case 119:{
-                    ++selected_room->selected_layer->has_empty;
-                    selected_room->selected_layer->selected_object->isNull = 1;
-                    selected.obj = -1;
-                    needRedraw = GL_TRUE;
+                    if(selected.obj > -1){
+                        for(unsigned int i = selected.obj+1; i < selected_room->selected_layer->lenght; ++i)
+                            selected_room->selected_layer->objects[i-1] = selected_room->selected_layer->objects[i];
+                        --selected_room->selected_layer->lenght;
+                        selected.obj = -1;
+                        needRedraw = GL_TRUE;
+                        puts("object deleted");
+                    }
                     break;
                 }
                 case 10:{
@@ -535,6 +508,10 @@ int main(int argc, char **argv){
                         selected_room->selected_layer->selected_object->tag = tag;
                         printf("selected tag: %d\n", tag);
                     }
+                    break;
+                }
+                case 11:{
+                    puts((selected_room->selected_layer->selected_object->rigid = !selected_room->selected_layer->selected_object->rigid) ? "rigid" : "trigger");
                     break;
                 }
                 case 33:{
@@ -569,6 +546,7 @@ int main(int argc, char **argv){
                                         obj->pos,
                                         obj->rotation,
                                         obj->scale,
+                                        obj->rigid,
                                         obj->tag,
                                         obj->mc,
                                         g > 7,
@@ -649,11 +627,16 @@ int main(int argc, char **argv){
                         selected_room->selected_layer->selected_object = selected_room->selected_layer->objects + selected.obj;
                         needRedraw = GL_TRUE;
                     }
-                }else if(pxc > 1.8f){
-                    int ind = 19 - ((int)(pyc * 20));
-                    if(ind > -1 && ind < markdown_len){
-                        selected_markdown = ind * 8;
-                        //needRedraw = GL_TRUE;
+                }else if(pxc > 1.9f){
+                    if(selected.obj != -1){
+                        int ind = 10 - ((int)(pyc * 10));
+                        selected_room->selected_layer->selected_object->tag = ind;
+                        printf("selected tag: %d|%d\n", ind, selected.obj);
+                        needRedraw = GL_TRUE;
+                    }else{
+                        int ind = 19 - ((int)(pyc * 20));
+                        if(ind > -1 && ind < markdown_len)
+                            selected_markdown = ind * 8;
                     }
                 }else if(pyc > 0.9f && pxc < 1.2f){
                     int ind = (int)(pxc*10)-2;
@@ -662,7 +645,7 @@ int main(int argc, char **argv){
                         //selected_room->selected_lay_code = selected.layer;
                         selected_room->selected_layer->selected_object = selected_room->selected_layer->objects + selected.obj;
                         selected.layer = ind;
-                        selected.obj = selected_room->ierarchy[ind].lenght - selected_room->ierarchy[ind].has_empty > 0 ? selected_room->ierarchy[ind].sel_obj : -1;
+                        selected.obj = selected_room->ierarchy[ind].sel_obj;
                         selected_room->selected_layer = selected_room->ierarchy + ind;
                         selected_room->selected_layer->sel_obj = selected.obj;
                         selected_room->selected_layer->selected_object = selected_room->selected_layer->objects + selected.obj;
@@ -674,7 +657,7 @@ int main(int argc, char **argv){
                         selected.room = ind;
                         selected_room = rooms + ind;
                         //selected.obj = selected_room->selected_layer->sel_obj;
-                        selected.obj = 0;
+                        selected.obj = -1;
                         selected_room->selected_layer = selected_room->ierarchy;
                         selected_room->selected_layer->selected_object = selected_room->selected_layer->objects;
                         printf("selected room|index: %d\n", ind);
@@ -683,31 +666,29 @@ int main(int argc, char **argv){
                 }else{
                     pxc += cam_pos.x*g_scale;
                     pyc += cam_pos.y*g_scale;
-                    //pxc *= g_scale;
-                    //pyc *= g_scale;
                     for(int f = 0; f < 10; ++f){
-                        for(int u = selected_room->ierarchy[f].lenght; u > -1; --u){
+                        int ex = 0;
+                        for(int u = selected_room->ierarchy[f].lenght-1; u > -1; --u){
                             object *ine = selected_room->ierarchy[f].objects + u;
-                            if(ine->isNull) continue;
                             float pc0 = ine->pos.x*g_scale;
                             float pc1 = ine->pos.y*g_scale;
                             float s_v0 = ine->scale.x/2.0f*g_scale;
                             float s_v1 = ine->scale.y/2.0f*g_scale;
                             if((pxc >= pc0 - s_v0) && (pyc >= pc1 - s_v1) && (pxc <= pc0 + s_v0) &&
                                 (pyc <= pc1 + s_v1)){
-                                //toast = 1;
-                                //snprintf(out, 16, "cmemoifwmo");
                                 selected.obj = u;
                                 selected.layer = f;
                                 selected_room->selected_layer = selected_room->ierarchy + f;
                                 selected_room->selected_layer->selected_object = selected_room->selected_layer->objects + u;
                                 selected_room->is_layer_move = 0;
                                 selected_room->pos_move = 0;
-                                printf("selected|tag:%d\n", selected_room->selected_layer->selected_object->tag);
+                                printf("selected %d|tag:%d\n", u, selected_room->selected_layer->selected_object->tag);
                                 needRedraw = GL_TRUE;
+                                ex = 1;
                                 break;
                             }
                         }
+                        if(ex) break;
                     }
                 }
             }
