@@ -31,24 +31,21 @@ void vec2_Normalize(vec2 *obj){
 vec2 vec2_Multi_F(vec2 v1, float mf){
     return (vec2){v1.x*mf,v1.y*mf};
 }
-
 unsigned int aabb_in_cam(float aminx, float aminy, float scx, float scy){
     if(aminx + scx < 0.0f || aminx > 2.0f) return 0;
     if(aminy + scy < 0.0f || aminy > 1.0f) return 0;
     return 1;
 }
-
 unsigned int aabb_in_aabb(float *a, float *b){
     if(a[4] < b[0] || a[0] > b[4]) return 0;
     if(a[5] < b[1] || a[1] > b[5]) return 0;
     return 1;
 }
-
 void redraw(void){
   glClear(GL_COLOR_BUFFER_BIT);
   glBindTexture(GL_TEXTURE_2D, user_texture);
 
-  for(int f = 0; f < 10; ++f){
+  for(int f = 0; f < 3; ++f){
     layer *lay = selected_room->ierarchy + f;
       for(int e = 0; e < lay->lenght; ++e){
         object *o_ptr = lay->objects + e;
@@ -124,7 +121,7 @@ void redraw(void){
         SETCOORD(0.0f, 0.9f-(k-selected_room->selected_layer->objects_pos)/10.0f, 0.2f, 0.1f);
         glDrawArrays(GL_QUADS, 0, 4);
     }
-    for(int u = 0; u < 10; ++u){
+    for(int u = 0; u < 3; ++u){
         if(selected.layer == u){
             SETRECT(plod_markdown,PLOD_BUTTON);
         }else{
@@ -154,6 +151,71 @@ void redraw(void){
         }
     }
   glXSwapBuffers(dpy, win);
+}
+void load_scene(void){
+    FILE *saved_scene = fopen("/home/oleg/Main/cbps/CardCreator/scene.scn", "rb");
+    if(!saved_scene) return;
+    unsigned short sizef;
+    fread(&sizef, 2, 1, saved_scene);
+    unsigned char len_char;
+    fread(&len_char, 1, 1, saved_scene);
+    rooms_len = len_char;
+
+    for(unsigned int r = 0; r < rooms_len; ++r){
+        selected_room = rooms + r;
+        unsigned char fore_lenght = 0, back_lenght = 0;
+        unsigned char conf[2];
+        fread(conf, 2, 1, saved_scene);
+        back_lenght = conf[0];
+        fore_lenght = conf[1];
+        unsigned char dummy[17];
+        fread(dummy, 17, 1, saved_scene);
+        if(back_lenght)fread(selected_room->mainscene.background, sizeof(back_obj) * back_lenght, 1, saved_scene);
+        if(fore_lenght)fread(selected_room->mainscene.foreground, sizeof(platform) * fore_lenght, 1, saved_scene);
+        //fread(&is_, 1, 1, saved_scene);
+        for(int f = 0; f < back_lenght; ++f){
+            back_obj bo = selected_room->mainscene.background[f];
+            object *obj = selected_room->ierarchy[0].objects + f;
+            *obj = (object){
+                (anim){},
+                bo.pos,
+                bo.scale,
+                bo.rotation,
+                0,
+                bo.img_code,
+                0,0
+            };
+        }
+        selected_room->ierarchy[0].lenght = back_lenght;
+        int s = 1;
+        uint len_rigid = 0;
+        for(int f = 0; f < fore_lenght; ++f){
+            platform plt = selected_room->mainscene.foreground[f];
+            if(plt.is_static && s != 2){
+                len_rigid = f;
+                s = 2;
+            }
+            object *obj = selected_room->ierarchy[s].objects + f - len_rigid;
+            printf("layer: %d|index: %d\n", s, f - len_rigid);
+            *obj = (object){
+                plt.a,
+                plt.pos,
+                plt.scale,
+                plt.rot,
+                plt.a.active,
+                plt.img_code,
+                plt.tag,
+                plt.rigid
+            };
+        }
+        //printf("%d|%d\n", len_rigid, fore_lenght-len_rigid);
+        selected_room->ierarchy[1].lenght = len_rigid;
+        selected_room->ierarchy[2].lenght = fore_lenght-len_rigid;
+    }
+    fclose(saved_scene);
+    selected_room = rooms;
+    selected.room = 0;
+    puts("return");
 }
 
 int main(int argc, char **argv){
@@ -229,13 +291,14 @@ int main(int argc, char **argv){
     selected_room = rooms + selected.room;
     selected_room->selected_layer = selected_room->ierarchy;
     //selected_room->selected_layer->selected_object = selected_room->selected_layer->objects + selected.obj;
-    for(int f = 0; f < 10; ++f){
+    for(int f = 0; f < 3; ++f){
         selected_room->ierarchy[f].objects = (object*)malloc(sizeof(object) * 20);
         selected_room->ierarchy[f].lenght = 0;
         selected_room->ierarchy[f].ram_size = 20;
         selected_room->ierarchy[f].sel_obj = -1;
     }
     am.active = 0;
+    load_scene();
     while (1){
     do{
       XNextEvent(dpy, &event);
@@ -355,7 +418,7 @@ int main(int argc, char **argv){
                     selected.obj = -1;
                     selected.layer = 0;
                     ++rooms_len;
-                    for(int f = 0; f < 10; ++f){
+                    for(int f = 0; f < 3; ++f){
                         selected_room->ierarchy[f].objects = (object*)malloc(sizeof(object) * 20);
                         selected_room->ierarchy[f].lenght = 0;
                         selected_room->ierarchy[f].ram_size = 20;
@@ -456,6 +519,7 @@ int main(int argc, char **argv){
                 case 113:{
                     if(selected.obj > -1){
                         spawned_rot = selected_room->selected_layer->selected_object->rotation + 10.0f;
+                        if(spawned_rot == 180.0f) spawned_rot = -180.0f;
                         selected_room->selected_layer->selected_object->rotation = spawned_rot;
                         needRedraw = GL_TRUE;
                         printf("object rot:%f\n", selected_room->selected_layer->selected_object->rotation);
@@ -465,6 +529,7 @@ int main(int argc, char **argv){
                 case 114:{
                     if(selected.obj > -1){
                         spawned_rot = selected_room->selected_layer->selected_object->rotation - 10.0f;
+                        if(spawned_rot == -180.0f) spawned_rot = 180.0f;
                         selected_room->selected_layer->selected_object->rotation = spawned_rot;
                         needRedraw = GL_TRUE;
                         printf("object rot:%f\n", selected_room->selected_layer->selected_object->rotation);
@@ -525,58 +590,35 @@ int main(int argc, char **argv){
                         unsigned char fore_lenght = 0, back_lenght = 0, is_electro = 0;
                         vec2 start = {9999, 9999};
                         vec2 finish ={-9999, -9999};
-                        for(int g = 0; g < 10; ++g){
-                            unsigned int is_fore = g > 4;
+                        for(int g = 0; g < 3; ++g){
+                            unsigned int is_fore = g > 0;
                             for(int f = 0; f < selected_room->ierarchy[g].lenght; ++f){
                                 object *obj = selected_room->ierarchy[g].objects + f;
                                 if(obj->tag == TAG_ELECTRON) is_electro = 1;
                                 if(obj->tag == TAG_START) start = obj->pos;
                                 if(obj->tag == TAG_FINISH) finish = obj->pos;
-                                float coo = obj->scale.x / obj->scale.y;
                                 if(is_fore){
-                                    float x = obj->pos.x - obj->scale.x/2.0f;
-                                    if(x < start.x)
-                                        start = VEC2(x, obj->pos.y+obj->scale.y/2.0f);
-                                    x += obj->scale.x;
-                                    if(x > finish.x)
-                                        finish = VEC2(x, obj->pos.y+obj->scale.y/2.0f);
                                     anim a = obj->is_animated?obj->animation:(anim){};
                                     a.active = obj->is_animated == 1;
                                     selected_room->mainscene.foreground[fore_lenght] = (platform){
+                                        a,
                                         obj->pos,
-                                        obj->rotation,
                                         obj->scale,
+                                        obj->rotation,
                                         obj->rigid,
                                         obj->tag,
-                                        obj->mc,
-                                        g > 7,
-                                        a
+                                        g == 2,
+                                        obj->mc
                                     };
                                     ++fore_lenght;
                                 }else{
-                                    float px = obj->pos.x - cam_pos.x;
-                                    float py = obj->pos.y - cam_pos.y;
-                                    SETCOORD(px, py, obj->scale.x, obj->scale.y);
-                                    mat2 rotm;
-                                    mat2_Set(&rotm, RAD(obj->rotation));
-                                    vec2 verts[4]={
-                                        VEC2(-obj->scale.x/2.0f, -obj->scale.y/2.0f),
-                                        VEC2(obj->scale.x/2.0f, -obj->scale.y/2.0f),
-                                        VEC2(obj->scale.x/2.0f, obj->scale.y/2.0f),
-                                        VEC2(-obj->scale.x/2.0f, obj->scale.y/2.0f),
-                                    };
-                                    for(int h = 0; h < 4; ++h){
-                                        vec2 v;
-                                        v = vec2_Plus(obj->pos, mat_Mult_Vec(rotm, verts[h]));
-                                        rectCoord[h*2] = v.x;
-                                        rectCoord[h*2+1] = v.y;
-                                    }
                                     selected_room->mainscene.background[back_lenght] = (back_obj){
-                                        .img_code = obj->mc,
-                                        .parralax_level = g / 1.0f
+                                        obj->pos,
+                                        obj->scale,
+                                        obj->rotation,
+                                        g,
+                                        obj->mc
                                     };
-                                    for(int d = 0; d < 8; ++d)
-                                        selected_room->mainscene.background[back_lenght].verts[d] = rectCoord[d];
                                     ++back_lenght;
                                 }
                             }
@@ -602,7 +644,7 @@ int main(int argc, char **argv){
                     glDisable(GL_BLEND);
                     glDisable(GL_TEXTURE_2D);
                     for(int h = 0; h < 4; ++h)
-                        for(int f = 0; f < 10; ++f)
+                        for(int f = 0; f < 3; ++f)
                             free((rooms + h)->ierarchy[f].objects);
                     return 0;
                 }
@@ -638,9 +680,10 @@ int main(int argc, char **argv){
                         if(ind > -1 && ind < markdown_len)
                             selected_markdown = ind * 8;
                     }
-                }else if(pyc > 0.9f && pxc < 1.2f){
+                }else if(pyc > 0.9f && pxc < 0.5f){
                     int ind = (int)(pxc*10)-2;
-                    if(ind < 10){
+                    printf("%d\n", ind);
+                    if(ind < 3){
                         selected_room->selected_layer->sel_obj = selected.obj;
                         //selected_room->selected_lay_code = selected.layer;
                         selected_room->selected_layer->selected_object = selected_room->selected_layer->objects + selected.obj;
@@ -666,7 +709,7 @@ int main(int argc, char **argv){
                 }else{
                     pxc += cam_pos.x*g_scale;
                     pyc += cam_pos.y*g_scale;
-                    for(int f = 0; f < 10; ++f){
+                    for(int f = 3; f > -1; --f){
                         int ex = 0;
                         for(int u = selected_room->ierarchy[f].lenght-1; u > -1; --u){
                             object *ine = selected_room->ierarchy[f].objects + u;

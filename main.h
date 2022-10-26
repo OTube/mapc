@@ -55,19 +55,19 @@ typedef struct{
 } mat2;
 
 typedef struct{
-    unsigned char active;
+    vec2 pos;
     float dt_rot;
     unsigned short time;
-    vec2 pos;
+    unsigned char active;
 }anim;
 
 typedef struct{
-    unsigned int mc;
-    float rotation;
+    anim animation;
     vec2 pos;
     vec2 scale;
-    anim animation;
-    unsigned int is_animated;
+    float rotation;
+    uint is_animated;
+    uint mc;
     uint tag;
     uint rigid;
 } object;
@@ -88,20 +88,22 @@ typedef struct{
 }selection;
 
 typedef struct{
-    float verts[8];
-    float parralax_level;
+    vec2 pos;
+    vec2 scale;
+    float rotation;
+    unsigned char parralax_level;
     unsigned char img_code;
 }back_obj;
 
 typedef struct{
+    anim a;
     vec2 pos;
-    float rot;
     vec2 scale;
+    float rot;
     unsigned char rigid;
     unsigned char tag;
-    unsigned char img_code;
     unsigned char is_static;
-    anim a;
+    unsigned char img_code;
 }platform;
 
 typedef struct{
@@ -168,7 +170,7 @@ static const float markdown[] = {
 0.000000f,1.000000f,0.625000f,1.000000f,0.625000f,0.875000f,0.000000f,0.875000f
 };
 typedef struct{
-    layer ierarchy[10];
+    layer ierarchy[3];
     unsigned int inactt_obj;
     unsigned int pos_move;
     unsigned int is_layer_move;
