@@ -145,8 +145,7 @@ static const float plod_markdown[] = {
 0.750000f,0.250000f,1.000000f,0.250000f,1.000000f,0.000000f,0.750000f,0.000000f,
 0.000000f,0.500000f,0.250000f,0.500000f,0.250000f,0.250000f,0.000000f,0.250000f,
 0.250000f,0.500000f,0.500000f,0.500000f,0.500000f,0.250000f,0.250000f,0.250000f,
-0.500000f,0.500000f,0.750000f,0.500000f,0.750000f,0.250000f,0.500000f,0.250000f,
-0,1,1,1,1,0,0,0
+0.500000f,0.500000f,0.750000f,0.500000f,0.750000f,0.250000f,0.500000f,0.250000f
 };
 unsigned int markdown_len = 18;
 static const float markdown[] = {
@@ -175,10 +174,11 @@ typedef struct{
     unsigned int pos_move;
     unsigned int is_layer_move;
     unsigned int selected_lay_code;
-    subscene mainscene;
     layer *selected_layer;
     vec2 coords;
 }room;
+
+subscene scene;
 unsigned int selected_markdown;
 float g_scale = 1.0f;
 vec2 cam_pos;

@@ -163,6 +163,14 @@ void load_scene(void){
 
     for(unsigned int r = 0; r < rooms_len; ++r){
         selected_room = rooms + r;
+        if(r > 0){
+            for(int f = 0; f < 3; ++f){
+                selected_room->ierarchy[f].objects = (object*)malloc(sizeof(object) * 20);
+                selected_room->ierarchy[f].lenght = 0;
+                selected_room->ierarchy[f].ram_size = 20;
+                selected_room->ierarchy[f].sel_obj = -1;
+            }
+        }
         unsigned char fore_lenght = 0, back_lenght = 0;
         unsigned char conf[2];
         fread(conf, 2, 1, saved_scene);
@@ -170,27 +178,32 @@ void load_scene(void){
         fore_lenght = conf[1];
         unsigned char dummy[17];
         fread(dummy, 17, 1, saved_scene);
-        if(back_lenght)fread(selected_room->mainscene.background, sizeof(back_obj) * back_lenght, 1, saved_scene);
-        if(fore_lenght)fread(selected_room->mainscene.foreground, sizeof(platform) * fore_lenght, 1, saved_scene);
+        printf("%d|%d\n", back_lenght, fore_lenght);
+        if(back_lenght)fread(scene.background, sizeof(back_obj) * back_lenght, 1, saved_scene);
+        if(fore_lenght)fread(scene.foreground, sizeof(platform) * fore_lenght, 1, saved_scene);
         //fread(&is_, 1, 1, saved_scene);
+        puts("step1");
         for(int f = 0; f < back_lenght; ++f){
-            back_obj bo = selected_room->mainscene.background[f];
+            back_obj bo = scene.background[f];
             object *obj = selected_room->ierarchy[0].objects + f;
+            puts("set");
             *obj = (object){
                 (anim){},
                 bo.pos,
                 bo.scale,
                 bo.rotation,
                 0,
-                bo.img_code,
+                bo.img_code*8,
                 0,0
             };
+            puts("sett");
         }
         selected_room->ierarchy[0].lenght = back_lenght;
+        puts("step2");
         int s = 1;
         uint len_rigid = 0;
         for(int f = 0; f < fore_lenght; ++f){
-            platform plt = selected_room->mainscene.foreground[f];
+            platform plt = scene.foreground[f];
             if(plt.is_static && s != 2){
                 len_rigid = f;
                 s = 2;
@@ -203,11 +216,12 @@ void load_scene(void){
                 plt.scale,
                 plt.rot,
                 plt.a.active,
-                plt.img_code,
+                plt.img_code*8,
                 plt.tag,
                 plt.rigid
             };
         }
+        puts("step");
         //printf("%d|%d\n", len_rigid, fore_lenght-len_rigid);
         selected_room->ierarchy[1].lenght = len_rigid;
         selected_room->ierarchy[2].lenght = fore_lenght-len_rigid;
@@ -216,6 +230,32 @@ void load_scene(void){
     selected_room = rooms;
     selected.room = 0;
     puts("return");
+}
+
+int cmp(const void *left, const void *right){
+    const back_obj *a = (const back_obj *)left;
+    const back_obj *b = (const back_obj *)right;
+    if(b->pos.x > a->pos.x){
+        return -1;
+    }
+    else if(a->pos.x > b->pos.x){
+        return 1;
+    }else{
+        return 0;
+    }
+}
+
+int cmp2(const void *left, const void *right){
+    const platform *a = (const platform *)left;
+    const platform *b = (const platform *)right;
+    if(b->pos.x > a->pos.x){
+        return -1;
+    }
+    else if(a->pos.x > b->pos.x){
+        return 1;
+    }else{
+        return 0;
+    }
 }
 
 int main(int argc, char **argv){
@@ -367,12 +407,12 @@ int main(int argc, char **argv){
                     printf("cam pos x: %f\n", cam_pos.x);
                     break;
                 }
-                case 27:{
+                /*case 27:{
                     glColor3f(0,0,0);
                     glClearColor(0.97,0.32,0,0);
                     needRedraw = GL_TRUE;
                     break;
-                }
+                }*/
                 case 30:{
                     g_scale *= 0.9f;
                     needRedraw = GL_TRUE;
@@ -591,6 +631,7 @@ int main(int argc, char **argv){
                         vec2 start = {9999, 9999};
                         vec2 finish ={-9999, -9999};
                         for(int g = 0; g < 3; ++g){
+                            unsigned char p1 = back_lenght, p2 = fore_lenght;
                             unsigned int is_fore = g > 0;
                             for(int f = 0; f < selected_room->ierarchy[g].lenght; ++f){
                                 object *obj = selected_room->ierarchy[g].objects + f;
@@ -600,7 +641,7 @@ int main(int argc, char **argv){
                                 if(is_fore){
                                     anim a = obj->is_animated?obj->animation:(anim){};
                                     a.active = obj->is_animated == 1;
-                                    selected_room->mainscene.foreground[fore_lenght] = (platform){
+                                    scene.foreground[fore_lenght] = (platform){
                                         a,
                                         obj->pos,
                                         obj->scale,
@@ -608,28 +649,35 @@ int main(int argc, char **argv){
                                         obj->rigid,
                                         obj->tag,
                                         g == 2,
-                                        obj->mc
+                                        obj->mc/8
                                     };
                                     ++fore_lenght;
                                 }else{
-                                    selected_room->mainscene.background[back_lenght] = (back_obj){
+                                    scene.background[back_lenght] = (back_obj){
                                         obj->pos,
                                         obj->scale,
                                         obj->rotation,
                                         g,
-                                        obj->mc
+                                        obj->mc/8
                                     };
                                     ++back_lenght;
                                 }
                             }
+
+                            if     (g==0)qsort(scene.background+p1, selected_room->ierarchy[0].lenght, sizeof(back_obj), cmp);
+                            else if(g==1)qsort(scene.foreground+p2, selected_room->ierarchy[1].lenght, sizeof(platform), cmp2);
+                            else if(g==2)qsort(scene.foreground+p2, selected_room->ierarchy[2].lenght, sizeof(platform), cmp2);
+
+                            //if(is_fore)fore_lenght+=selected_room->ierarchy[g].lenght;
+                            //else back_lenght+=selected_room->ierarchy[0].lenght;
                         }
                         sizef += 3 + sizeof(vec2)*2 + sizeof(back_obj)*back_lenght + sizeof(platform)*fore_lenght;
                         unsigned char conf[3] = {back_lenght, fore_lenght, is_electro};
                         fwrite(conf, sizeof(unsigned char) * 3, 1, saved_scene);
                         vec2 poses[2] = {start, finish};
                         fwrite(poses, sizeof(vec2) * 2, 1, saved_scene);
-                        if(back_lenght) fwrite(selected_room->mainscene.background, sizeof(back_obj) * back_lenght, 1, saved_scene);
-                        if(fore_lenght) fwrite(selected_room->mainscene.foreground, sizeof(platform) * fore_lenght, 1, saved_scene);
+                        if(back_lenght) fwrite(scene.background, sizeof(back_obj) * back_lenght, 1, saved_scene);
+                        if(fore_lenght) fwrite(scene.foreground, sizeof(platform) * fore_lenght, 1, saved_scene);
                     }
                     fseek(saved_scene, 0, SEEK_SET);
                     fwrite(&sizef, 2, 1, saved_scene);
@@ -709,7 +757,7 @@ int main(int argc, char **argv){
                 }else{
                     pxc += cam_pos.x*g_scale;
                     pyc += cam_pos.y*g_scale;
-                    for(int f = 3; f > -1; --f){
+                    for(int f = 2; f > -1; --f){
                         int ex = 0;
                         for(int u = selected_room->ierarchy[f].lenght-1; u > -1; --u){
                             object *ine = selected_room->ierarchy[f].objects + u;
@@ -731,7 +779,7 @@ int main(int argc, char **argv){
                                 break;
                             }
                         }
-                        if(ex) break;
+                        if(ex)break;
                     }
                 }
             }
