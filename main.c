@@ -27,8 +27,7 @@
 #define RAD(deg) deg * (3.141593f / 180.0f)
 #define PRINT(x) printf("%p\n", x)
 #define PRINT_SELECTION() printf("layer: %d object: %d\n", selected.layer, selected.obj)
-#define FILE_SIZE 1680335
-#define MK_LEN 14
+#define MK_LEN 37
 
 #define TAG_HERO 1
 #define TAG_ENEMY 2
@@ -150,20 +149,43 @@ static const float plod_markdown[] = {
 0.500000f,0.500000f,0.750000f,0.500000f,0.750000f,0.250000f,0.500000f,0.250000f
 };
 static const float markdown[] ={
-0.000000f,0.187500f,0.125000f,0.187500f,0.125000f,0.000000f,0.000000f,0.000000f,
-0.125000f,0.187500f,0.250000f,0.187500f,0.250000f,0.000000f,0.125000f,0.000000f,
-0.250000f,0.187500f,0.375000f,0.187500f,0.375000f,0.000000f,0.250000f,0.000000f,
-0.000000f,0.250000f,0.031250f,0.250000f,0.031250f,0.187500f,0.000000f,0.187500f,
-0.031250f,0.250000f,0.062500f,0.250000f,0.062500f,0.187500f,0.031250f,0.187500f,
-0.062500f,0.250000f,0.125000f,0.250000f,0.125000f,0.187500f,0.062500f,0.187500f,
-0.125000f,0.250000f,0.187500f,0.250000f,0.187500f,0.187500f,0.125000f,0.187500f,
-0.187500f,0.250000f,0.250000f,0.250000f,0.250000f,0.187500f,0.187500f,0.187500f,
-0.250000f,0.250000f,0.312500f,0.250000f,0.312500f,0.187500f,0.250000f,0.187500f,
-0.312500f,0.250000f,0.343750f,0.250000f,0.343750f,0.187500f,0.312500f,0.187500f,
-0.000000f,0.312500f,0.125000f,0.312500f,0.125000f,0.250000f,0.000000f,0.250000f,
-0.125000f,0.312500f,0.187500f,0.312500f,0.187500f,0.250000f,0.125000f,0.250000f,
-0.187500f,0.312500f,0.250000f,0.312500f,0.250000f,0.250000f,0.187500f,0.250000f,
-0.000000f,0.343750f,0.125000f,0.343750f,0.125000f,0.312500f,0.000000f,0.312500f
+0.000926f,0.072726f,0.025983f,0.072726f,0.025983f,0.014857f,0.000926f,0.014857f,
+0.044481f,0.075477f,0.073494f,0.075477f,0.073494f,0.009254f,0.044481f,0.009254f,
+0.090768f,0.076525f,0.131233f,0.076525f,0.131233f,0.013201f,0.090768f,0.013201f,
+0.154878f,0.080298f,0.192238f,0.080298f,0.192238f,0.011338f,0.154878f,0.011338f,
+0.213379f,0.081473f,0.249429f,0.081473f,0.249429f,0.018585f,0.213379f,0.018585f,
+0.270419f,0.081558f,0.328911f,0.081558f,0.328911f,0.056869f,0.270419f,0.056869f,
+0.347452f,0.084477f,0.388301f,0.084477f,0.388301f,0.025878f,0.347452f,0.025878f,
+0.41434f,0.083876f,0.43592f,0.083876f,0.43592f,0.007134f,0.41434f,0.007134f,
+0.462551f,0.082147f,0.503037f,0.082147f,0.503037f,0.001268f,0.462551f,0.001268f,
+0.531565f,0.0748f,0.595193f,0.0748f,0.595193f,0.015676f,0.531565f,0.015676f,
+0.623508f,0.072841f,0.69406f,0.072841f,0.69406f,0.028422f,0.623508f,0.028422f,
+0.739187f,0.073985f,0.786772f,0.073985f,0.786772f,0.018512f,0.739187f,0.018512f,
+0.840427f,0.073149f,0.876994f,0.073149f,0.876994f,0.014369f,0.840427f,0.014369f,
+0.920389f,0.085723f,0.984376f,0.085723f,0.984376f,0.035592f,0.920389f,0.035592f,
+0.011078f,0.116711f,0.085823f,0.116711f,0.085823f,0.097032f,0.011078f,0.097032f,
+0.113868f,0.127261f,0.137745f,0.127261f,0.137745f,0.08957f,0.113868f,0.08957f,
+0.160672f,0.126902f,0.229396f,0.126902f,0.229396f,0.09282f,0.160672f,0.09282f,
+0.261846f,0.128275f,0.298175f,0.128275f,0.298175f,0.094023f,0.261846f,0.094023f,
+0.327172f,0.128692f,0.366446f,0.128692f,0.366446f,0.092875f,0.327172f,0.092875f,
+0.380222f,0.128997f,0.414595f,0.128997f,0.414595f,0.097109f,0.380222f,0.097109f,
+0.42689f,0.128072f,0.459545f,0.128072f,0.459545f,0.097496f,0.42689f,0.097496f,
+0.573468f,0.169698f,0.617661f,0.169698f,0.617661f,0.120333f,0.573468f,0.120333f,
+0.627348f,0.163099f,0.666845f,0.163099f,0.666845f,0.115192f,0.627348f,0.115192f,
+0.671789f,0.164403f,0.71425f,0.164403f,0.71425f,0.115106f,0.671789f,0.115106f,
+0.731887f,0.165159f,0.765603f,0.165159f,0.765603f,0.119818f,0.731887f,0.119818f,
+0.480138f,0.134831f,0.5292f,0.134831f,0.5292f,0.092342f,0.480138f,0.092342f,
+0.780933f,0.164004f,0.844986f,0.164004f,0.844986f,0.119631f,0.780933f,0.119631f,
+0.863695f,0.165369f,0.908116f,0.165369f,0.908116f,0.1127f,0.863695f,0.1127f,
+0.91676f,0.165078f,0.955186f,0.165078f,0.955186f,0.115719f,0.91676f,0.115719f,
+0.957728f,0.166458f,0.991556f,0.166458f,0.991556f,0.107981f,0.957728f,0.107981f,
+0.018991f,0.240784f,0.026453f,0.240784f,0.026453f,0.152445f,0.018991f,0.152445f,
+0.0364f,0.240788f,0.039203f,0.240788f,0.039203f,0.15218f,0.0364f,0.15218f,
+0.045007f,0.241788f,0.049986f,0.241788f,0.049986f,0.153362f,0.045007f,0.153362f,
+0.05722f,0.241721f,0.063312f,0.241721f,0.063312f,0.143942f,0.05722f,0.143942f,
+0.068647f,0.24151f,0.075022f,0.24151f,0.075022f,0.145465f,0.068647f,0.145465f,
+0.081557f,0.241428f,0.083772f,0.241428f,0.083772f,0.179574f,0.081557f,0.179574f,
+0.088236f,0.240266f,0.091912f,0.240266f,0.091912f,0.146631f,0.088236f,0.146631f
 };
 typedef struct{
     uint8_t eventer_index;
@@ -241,9 +263,11 @@ void SETCOORD(float startx, float starty, float scalex, float scaley) {
     rectCoord[6]=startx; rectCoord[7]=starty+scaley;
 }
 
-unsigned char *decode(char *from, unsigned int rsize, unsigned int fsize){
+unsigned char *decode(char *from, unsigned int rsize){
     FILE *fl1 = fopen(from, "rb");
     if(fl1 == NULL) return NULL;
+    unsigned int fsize;
+    fread(&fsize, 4, 1, fl1);
     unsigned char *userdata = (unsigned char*)malloc(rsize*rsize*4);
     unsigned char s;
     unsigned char prev[4];
@@ -395,7 +419,7 @@ void redraw(void){
 }
 
 void load_scene(void){
-    FILE *saved_scene = fopen("/home/oleg/Main/cbps/CardCreator/scene.scn", "rb");
+    FILE *saved_scene = fopen("scene.scn", "rb");
     if(!saved_scene) return;
     unsigned short sizef;
     fread(&sizef, 2, 1, saved_scene);
@@ -583,6 +607,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 pxc /= 640.0f;
                 pyc /= 640.0f;
                 pyc = 1 - pyc;
+                pxc /= g_scale;
+                pyc /= g_scale;
                 if(selected_room->selected_layer->lenght + 1 > selected_room->ierarchy[selected.layer].ram_size){
                     selected_room->selected_layer->ram_size += 20;
                     selected_room->selected_layer->objects = (object*)realloc(selected_room->selected_layer->objects,
@@ -897,7 +923,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 break;
             }
             case GLFW_KEY_P:{
-                FILE *saved_scene = fopen("/home/oleg/Main/cbps/CardCreator/scene.scn", "wb");
+                FILE *saved_scene = fopen("scene.scn", "wb");
                 unsigned short sizef = 1;
                 fseek(saved_scene, 2, SEEK_SET);
                 unsigned char len_char = (unsigned char)rooms_len;
@@ -1137,12 +1163,8 @@ int main(int argc, char **argv){
     glfwMakeContextCurrent(window);
 
     glClearColor(0.0, 0.0, 0.5, 0.0);
-    unsigned char *data;
-    FILE *fl = fopen("/home/oleg/Main/mapc-main/plodtex.utx", "rb");
-    if(fl == NULL) return 1;
-    data = (unsigned char*)malloc(128 * 128 * 4 * sizeof(unsigned char));
-    fread(data, 128 * 128 * 4, 1, fl);
-    fclose(fl);
+    unsigned char *data = decode("/home/oleg/Main/mapc-main/plodtex.ugg", 128);
+    if(data == NULL) return 1;
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1156,7 +1178,7 @@ int main(int argc, char **argv){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 128, 128, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     free(data);
-    unsigned char *userdata = decode("/home/oleg/Main/mapc-main/gametex.ugg", USER_IMAGE_SIZE_INT, FILE_SIZE); //(unsigned char*)malloc(USER_IMAGE_SIZE_INT * USER_IMAGE_SIZE_INT * 4 * sizeof(unsigned char));
+    unsigned char *userdata = decode("/home/oleg/Main/Inkscape/gametex.ugg", USER_IMAGE_SIZE_INT); //(unsigned char*)malloc(USER_IMAGE_SIZE_INT * USER_IMAGE_SIZE_INT * 4 * sizeof(unsigned char));
     if(userdata == NULL) return 1;
     glGenTextures(1, &user_texture);
     glBindTexture(GL_TEXTURE_2D, user_texture);
