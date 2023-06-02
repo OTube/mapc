@@ -99,6 +99,7 @@ typedef struct{
     float rotation;
     unsigned char is_back;
     unsigned char img_code;
+    char gap[2];
 }back_obj;
 
 typedef struct{
@@ -453,6 +454,7 @@ void load_scene(void){
         if(back_lenght)fread(scene.background, sizeof(back_obj) * back_lenght, 1, saved_scene);
         if(fore_lenght)fread(scene.foreground, sizeof(platform) * fore_lenght, 1, saved_scene);
         if(text_len){
+            puts("txt");
             selected_room->ierarchy[3].lenght = text_len;
             for(int l = 0; l < text_len; ++l){
                 object *obj = selected_room->ierarchy[3].objects + l;
@@ -474,6 +476,7 @@ void load_scene(void){
         int c = 0;
         for(int f = 0; f < back_lenght; ++f){
             back_obj bo = scene.background[f];
+            printf("%d|%d\n", bo.is_back, c);
             if(!bo.is_back && c != 1){
                 len_back = f;
                 c = 1;
@@ -486,9 +489,13 @@ void load_scene(void){
                 bo.rotation,
                 0,
                 bo.img_code*8,
-                0,0
+                0,0,
+                {},
+                0
             };
         }
+        if(!len_back && back_lenght && scene.background[0].is_back) len_back = back_lenght;
+
         selected_room->ierarchy[0].lenght = len_back;
         selected_room->ierarchy[1].lenght = back_lenght-len_back;
         int ai_ = 0;
@@ -501,7 +508,6 @@ void load_scene(void){
                 s = 4;
             }
             object *obj = &selected_room->ierarchy[s].objects[f - len_rigid];
-            printf("%p\n", obj);
             *obj = (object){
                 (anim){},
                 plt.pos,
@@ -510,7 +516,9 @@ void load_scene(void){
                 anims_len <= f && scene.anims[ai_].owner == f,
                 plt.img_code*8,
                 plt.tag,
-                plt.rigid
+                plt.rigid,
+                {},
+                0
             };
             printf("%f|%f\n", plt.pos.x, plt.pos.y);
             if(anims_len <= f && scene.anims[ai_].owner == f){
@@ -963,6 +971,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                                 }
                                 ++fore_lenght;
                             }else if(is_fore == 0){
+                                printf("is back: %d\n", g == 0);
                                 scene.background[back_lenght] = (back_obj){
                                     obj->pos,
                                     obj->scale,
@@ -1015,8 +1024,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     }
 
                     sizef += 5 + sizeof(vec2)*2 + sizeof(back_obj)*back_lenght + sizeof(platform)*fore_lenght + text_size + sizeof(anim)*anims_len + sizeof(state_event)*selected_room->events_len;
-                    printf("%d\n", sizeof(back_obj)*back_lenght);
-                    printf("%d\n", sizeof(platform)*fore_lenght);
+                    printf("%d, %d\n", sizeof(back_obj), sizeof(back_obj)*back_lenght);
+                    printf("%d, %d\n", sizeof(platform), sizeof(platform)*fore_lenght);
                     printf("%d\n", text_size);
                     printf("%d\n", sizeof(anim)*anims_len);
                     printf("%d\n", sizeof(state_event)*selected_room->events_len);
@@ -1178,7 +1187,7 @@ int main(int argc, char **argv){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 128, 128, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
     free(data);
-    unsigned char *userdata = decode("/home/oleg/Main/Inkscape/gametex.ugg", USER_IMAGE_SIZE_INT); //(unsigned char*)malloc(USER_IMAGE_SIZE_INT * USER_IMAGE_SIZE_INT * 4 * sizeof(unsigned char));
+    unsigned char *userdata = decode("/home/oleg/Main/Inkscape/gametex.ugg", USER_IMAGE_SIZE_INT);
     if(userdata == NULL) return 1;
     glGenTextures(1, &user_texture);
     glBindTexture(GL_TEXTURE_2D, user_texture);
@@ -1229,5 +1238,6 @@ int main(int argc, char **argv){
     }
     free(rooms);
    glfwTerminate();
+   puts("exit");
   return 0;
 }
